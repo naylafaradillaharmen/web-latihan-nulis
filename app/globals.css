@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-mist: #DBE7E7;
+  --color-sky: #B8D2DF;
+  --color-slate: #AEB8C1;
+  --color-periwinkle: #A8ACC1;
+  --color-muted: #A8A8B0;
+  --color-deep: #4D6072;
+}
+
+body {
+  background-color: #F8FAFB;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(219, 231, 231, 0.45) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(184, 210, 223, 0.35) 0px, transparent 45%),
+    radial-gradient(at 100% 100%, rgba(168, 172, 193, 0.25) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(219, 231, 231, 0.3) 0px, transparent 45%);
+  background-attachment: fixed;
+  color: #4D6072;
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(219, 231, 231, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #B8D2DF;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #AEB8C1;
+}
+
+/* Shimmer animation untuk skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(219, 231, 231, 0.35) 25%,
+    rgba(255, 255, 255, 0.7) 50%,
+    rgba(219, 231, 231, 0.35) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}

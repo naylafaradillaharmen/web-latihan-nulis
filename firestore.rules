@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /entries/{entryId} {
+      allow read: if resource.data.deviceId != null;
+      allow create: if request.resource.data.deviceId is string
+                    && request.resource.data.deviceId.size() > 0
+                    && request.resource.data.text is string
+                    && request.resource.data.wordCount is number
+                    && request.resource.data.promptCategory is string
+                    && request.resource.data.date != null;
+      allow update: if resource.data.deviceId == request.resource.data.deviceId;
+      allow delete: if resource.data.deviceId != null;
+    }
+  }
+}
