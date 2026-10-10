@@ -1,6 +1,18 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  sendPasswordResetEmail,
+  onAuthStateChanged,
+  updateProfile,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+} from "firebase/auth";
+import { auth } from "../lib/firebase";
 
 const AuthContext = createContext({
   user: null,
@@ -16,92 +28,65 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check existing token on initial load
   useEffect(() => {
-    async function loadUser() {
-      try {
-        const token = localStorage.getItem("inkly_token");
-        if (!token) {
-          setLoading(false);
-          return;
-        }
-
-        const res = await fetch("/api/auth/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user);
-        } else {
-          localStorage.removeItem("inkly_token");
-          setUser(null);
-        }
-      } catch (err) {
-        console.warn("Gagal memuat status login pengguna:", err);
-      } finally {
-        setLoading(false);
-      }
+    if (!auth) {
+      setLoading(false);
+      return;
     }
 
-    loadUser();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = async (email, password, rememberDevice = true) => {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || "Gagal masuk. Periksa email dan passphrase.");
+    if (!auth) throw new Error("Firebase Auth is not initialized.");
+    try {
+      const persistence = rememberDevice
+        ? browserLocalPersistence
+        : browserSessionPersistence;
+      await setPersistence(auth, persistence);
+    } catch (persistErr) {
+      console.warn("Could not set auth persistence:", persistErr);
     }
-
-    if (data.token) {
-      localStorage.setItem("inkly_token", data.token);
-    }
-    setUser(data.user);
-    return data.user;
+    return await signInWithEmailAndPassword(auth, email, password);
   };
 
   const register = async (email, password, displayName = "") => {
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, displayName }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || "Gagal mendaftar.");
+    if (!auth) throw new Error("Firebase Auth is not initialized.");
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+    } catch (persistErr) {
+      console.warn("Could not set auth persistence:", persistErr);
     }
-
-    if (data.token) {
-      localStorage.setItem("inkly_token", data.token);
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
+    if (displayName && userCredential.user) {
+      await updateProfile(userCredential.user, { displayName });
     }
-    setUser(data.user);
-    return data.user;
+    return userCredential;
   };
 
   const logout = async () => {
-    localStorage.removeItem("inkly_token");
+    if (!auth) return;
     localStorage.removeItem("inkly_remember_device");
-    setUser(null);
+    await signOut(auth);
   };
 
   const resetPassword = async (email) => {
-    // Karena menggunakan SQLite lokal di komputer sendiri
-    throw new Error(
-      "Database lokal SQLite aktif. Anda dapat langsung mendaftarkan akun baru atau membuat passphrase baru kapan saja tanpa perlu verifikasi email."
-    );
+    if (!auth) throw new Error("Firebase Auth is not initialized.");
+    return await sendPasswordResetEmail(auth, email);
   };
 
-  const getIdToken = async () => {
-    return localStorage.getItem("inkly_token");
+  const getIdToken = async (forceRefresh = false) => {
+    if (!user) return null;
+    return await user.getIdToken(forceRefresh);
   };
 
   return (
