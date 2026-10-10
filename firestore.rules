@@ -2,16 +2,21 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Inkly Writing Entries: Strict UID ownership
     match /entries/{entryId} {
-      allow read: if resource.data.deviceId != null;
-      allow create: if request.resource.data.deviceId is string
-                    && request.resource.data.deviceId.size() > 0
-                    && request.resource.data.text is string
-                    && request.resource.data.wordCount is number
-                    && request.resource.data.promptCategory is string
-                    && request.resource.data.date != null;
-      allow update: if resource.data.deviceId == request.resource.data.deviceId;
-      allow delete: if resource.data.deviceId != null;
+      allow read, update, delete: if request.auth != null 
+                                  && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null 
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.content is string;
+    }
+
+    // Daily AI usage tracking: Scoped to user's UID
+    match /daily_ai_usage/{usageId} {
+      allow read: if request.auth != null 
+                  && resource.data.userId == request.auth.uid;
+      allow create, update: if request.auth != null 
+                            && request.resource.data.userId == request.auth.uid;
     }
   }
 }

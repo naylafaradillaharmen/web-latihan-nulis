@@ -1,63 +1,91 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Calendar } from "lucide-react";
-import { BotanicalBranch } from "./FloralArt";
+import { useAuth } from "../context/AuthContext";
 
-export default function Header() {
-  const [currentDate, setCurrentDate] = useState("");
-
-  useEffect(() => {
-    const now = new Date();
-    const formatter = new Intl.DateTimeFormat("id-ID", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-    setCurrentDate(formatter.format(now));
-  }, []);
+export default function Header({ activeTab, onTabChange, onOpenAuth }) {
+  const { user } = useAuth();
 
   return (
-    <header className="relative w-full pt-4 pb-4">
-      {/* Soft watercolor splash in top-right corner */}
-      <div className="absolute top-0 right-0 w-44 h-24 bg-gradient-to-bl from-palette-sky/35 via-palette-mist/40 to-transparent rounded-bl-[4rem] pointer-events-none blur-sm" />
-
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        {/* Left: Logo Pensil & Brand Title "WEB LATIHAN NULIS" */}
-        <div className="flex items-center gap-3.5">
-          <div className="relative w-12 h-12 rounded-xl overflow-hidden shadow-card border border-palette-slate/30 bg-white flex items-center justify-center p-1 flex-shrink-0 group hover:scale-105 transition-transform duration-200">
-            <img
-              src="/logo.jpg"
-              alt="Logo Web Latihan Nulis"
-              className="w-full h-full object-contain"
-            />
-          </div>
-          <div>
-            <h1 className="font-serif text-2xl sm:text-3xl tracking-[0.24em] font-semibold text-palette-deep uppercase">
-              Web Latihan Nulis
-            </h1>
-            <p className="text-[11px] sm:text-xs tracking-[0.3em] font-medium text-palette-periwinkle uppercase mt-0.5">
-              Tulis &bull; Pikir &bull; Tumbuh
-            </p>
-          </div>
+    <header className="sticky top-0 z-40 bg-[#FAF7F2]/90 backdrop-blur-md border-b border-[#EDE6DC]">
+      <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+        {/* Brand Logo / Wordmark */}
+        <div className="flex items-center space-x-6">
+          <button
+            type="button"
+            onClick={() => onTabChange("journal")}
+            className="group flex items-center gap-1.5 focus:outline-none"
+          >
+            <span className="font-serif text-2xl tracking-tight text-ink-deep font-normal italic">
+              inkly
+            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-accent group-hover:scale-125 transition-transform" />
+          </button>
+          <span className="hidden sm:inline-block font-script text-lg text-ink-faint">
+            little notes for the quiet hours ♡
+          </span>
         </div>
 
-        {/* Center / Right: Date & Quote */}
-        <div className="flex flex-wrap items-center gap-4 sm:gap-6 self-start lg:self-auto">
-          {/* Tanggal Hari Ini */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 border border-palette-slate/30 shadow-card text-xs sm:text-sm text-palette-deep font-medium backdrop-blur-sm">
-            <Calendar className="w-3.5 h-3.5 text-palette-periwinkle" />
-            <span>{currentDate || "Memuat tanggal..."}</span>
-          </div>
+        {/* 4 Navigation Links */}
+        <nav className="flex items-center space-x-5 sm:space-x-7 text-xs uppercase tracking-widest text-ink-muted">
+          <button
+            type="button"
+            onClick={() => onTabChange("journal")}
+            className={`nav-link hover:text-ink-deep transition font-medium ${
+              activeTab === "journal"
+                ? "text-ink-deep underline underline-offset-8 decoration-rose-accent"
+                : "text-ink-muted"
+            }`}
+          >
+            journal
+          </button>
 
-          {/* Inspirational Quote with Floral illustration */}
-          <div className="hidden sm:flex items-center gap-2 pr-2">
-            <BotanicalBranch className="w-8 h-10 flex-shrink-0" />
-            <p className="font-hand text-base sm:text-lg text-palette-deep/80 leading-tight max-w-[200px]">
-              Tulisan kecil hari ini, bisa jadi perubahan besar nanti.
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={() => onTabChange("editor")}
+            className={`nav-link hover:text-ink-deep transition font-medium ${
+              activeTab === "editor"
+                ? "text-ink-deep underline underline-offset-8 decoration-rose-accent"
+                : "text-ink-muted"
+            }`}
+          >
+            write
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onTabChange("reading")}
+            className={`nav-link hover:text-ink-deep transition font-medium ${
+              activeTab === "reading"
+                ? "text-ink-deep underline underline-offset-8 decoration-rose-accent"
+                : "text-ink-muted"
+            }`}
+          >
+            reading
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onTabChange("settings")}
+            className={`nav-link hover:text-ink-deep transition font-medium ${
+              activeTab === "settings"
+                ? "text-ink-deep underline underline-offset-8 decoration-rose-accent"
+                : "text-ink-muted"
+            }`}
+          >
+            settings
+          </button>
+        </nav>
+
+        {/* Quick Actions */}
+        <div className="flex items-center text-ink-muted">
+          <button
+            type="button"
+            onClick={() => onTabChange("editor", true)}
+            className="flex items-center gap-1.5 text-xs font-medium tracking-wide bg-rose-soft text-rose-deep hover:bg-rose-accent hover:text-white px-3 py-1.5 rounded-full transition shadow-xs"
+          >
+            <span>+</span>
+            <span>write</span>
+          </button>
         </div>
       </div>
     </header>

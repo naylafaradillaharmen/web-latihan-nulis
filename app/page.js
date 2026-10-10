@@ -1,220 +1,480 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Header from "../components/Header";
-import Sidebar from "../components/Sidebar";
-import PromptCard from "../components/PromptCard";
 import Editor from "../components/Editor";
-import HistoryList from "../components/HistoryList";
+import JournalList from "../components/JournalList";
+import ReadingView from "../components/ReadingView";
+import TutorReviewView from "../components/TutorReviewView";
+import SettingsView from "../components/SettingsView";
+import AuthView from "../components/AuthView";
+import TopUpModal from "../components/TopUpModal";
 import ConfirmModal from "../components/ConfirmModal";
 import Toast from "../components/Toast";
-import { getOrCreateDeviceId } from "../lib/deviceId";
+import { useAuth } from "../context/AuthContext";
 import {
   saveWritingEntry,
   getWritingEntries,
   deleteWritingEntry,
-  deleteAllWritingEntries,
-  isFirebaseConfigured,
 } from "../lib/firebase";
-import { getPromptForDay } from "../lib/prompts";
 
 export default function Home() {
-  const [deviceId, setDeviceId] = useState("");
-  const [text, setText] = useState("");
-  const [promptCategory, setPromptCategory] = useState("");
-  const [entries, setEntries] = useState([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const { user, loading: authLoading, getIdToken } = useAuth();
+
+  // Active view: "journal" | "editor" | "reading" | "review" | "settings" | "login"
+  const [activeTab, setActiveTab] = useState("journal");
+
+  // Writing state
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [language, setLanguage] = useState("id");
   const [activeEntryId, setActiveEntryId] = useState(null);
+  const [aiReviewData, setAiReviewData] = useState(null);
+  const [activeEntryObj, setActiveEntryObj] = useState(null);
+
+  // Journal entries state
+  const [entries, setEntries] = useState([]);
+  const [isLoadingEntries, setIsLoadingEntries] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isAiReviewing, setIsAiReviewing] = useState(false);
+
+  // Top Up / Token Exhausted Modal state
+  const [isTopUpOpen, setIsTopUpOpen] = useState(false);
+
+  // Modals & feedback
   const [toast, setToast] = useState(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [isDeletingAll, setIsDeletingAll] = useState(false);
-  const [activeTab, setActiveTab] = useState("beranda");
+  const [entryToDelete, setEntryToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const historyRef = useRef(null);
-  const editorRef = useRef(null);
-
-  // Inisialisasi kategori prompt hari ini
-  useEffect(() => {
-    const today = new Date().getDay();
-    const todayPrompt = getPromptForDay(today, 0);
-    setPromptCategory(todayPrompt.kind);
-  }, []);
-
-  // Ambil deviceId dan riwayat tulisan saat awal mount
-  const fetchEntries = useCallback(async (devId) => {
-    if (!devId) return;
-    setIsLoadingHistory(true);
-    try {
-      const data = await getWritingEntries(devId);
-      setEntries(data || []);
-    } catch (err) {
-      console.error("Gagal mengambil riwayat tulisan:", err);
-      showToast("Gagal memuat riwayat tulisan", "error");
-    } finally {
-      setIsLoadingHistory(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const id = getOrCreateDeviceId();
-    setDeviceId(id);
-    fetchEntries(id);
-  }, [fetchEntries]);
-
-  // Helper toast
   const showToast = (message, type = "success") => {
     setToast({ message, type });
     setTimeout(() => {
       setToast(null);
-    }, 3800);
+    }, 4000);
   };
 
-  // Simpan tulisan ke Firestore
-  const handleSave = async ({ text: content, wordCount, promptCategory: category }) => {
-    if (!deviceId) return;
+  // Fetch entries for authenticated user
+  const fetchUserEntries = useCallback(async (uid) => {
+    if (!uid) {
+      setEntries([]);
+      return;
+    }
+    setIsLoadingEntries(true);
+    try {
+      const data = await getWritingEntries(uid);
+      setEntries(data || []);
+    } catch (err) {
+      console.error("Gagal memuat catatan:", err);
+      showToast("Gagal memuat arsip tulisan.", "error");
+    } finally {
+      setIsLoadingEntries(false);
+    }
+  }, []);
+
+  // When user changes or logs in
+  useEffect(() => {
+    if (user?.uid) {
+      fetchUserEntries(user.uid);
+      if (activeTab === "login") {
+        setActiveTab("journal");
+      }
+    } else {
+      setEntries([]);
+    }
+  }, [user, fetchUserEntries, activeTab]);
+
+  // Load language preference from localStorage
+  useEffect(() => {
+    const savedLang = localStorage.getItem("inkly_preferred_lang");
+    if (savedLang === "en" || savedLang === "id") {
+      setLanguage(savedLang);
+    }
+  }, []);
+
+  const handleChangePreferredLanguage = (lang) => {
+    setLanguage(lang);
+    localStorage.setItem("inkly_preferred_lang", lang);
+    showToast(
+      `Bahasa penulisan diubah ke ${
+        lang === "id" ? "Bahasa Indonesia" : "English"
+      }.`,
+      "success"
+    );
+  };
+
+  const handleTabChange = (tab, forceNew = false) => {
+    if (tab === "editor" && forceNew) {
+      handleNewWriting();
+      return;
+    }
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Start a fresh, clean writing sheet
+  const handleNewWriting = () => {
+    setActiveEntryId(null);
+    setActiveEntryObj(null);
+    setTitle("");
+    setContent("");
+    setAiReviewData(null);
+    setActiveTab("editor");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Select an existing entry to read in Reading Sanctuary
+  const handleSelectEntry = (entry) => {
+    setActiveEntryId(entry.id);
+    setActiveEntryObj(entry);
+    setTitle(entry.title || "");
+    setContent(entry.content || entry.text || "");
+    setLanguage(entry.language || "id");
+    setAiReviewData(entry.aiReviewData || null);
+    setActiveTab("reading");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Save writing entry
+  const handleSave = async () => {
+    if (!user) {
+      setActiveTab("login");
+      return;
+    }
+
+    if (!content.trim()) {
+      showToast("Tulis sesuatu sebelum menyimpan.", "error");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const res = await saveWritingEntry({
-        deviceId,
-        text: content,
-        wordCount,
-        promptCategory: category,
+        id: activeEntryId,
+        userId: user.uid,
+        title: title.trim() || "Untitled thoughts",
+        content: content.trim(),
+        language,
+        aiReviewed: Boolean(aiReviewData),
+        aiReviewedAt: aiReviewData?.reviewedAt
+          ? new Date(aiReviewData.reviewedAt)
+          : null,
+        aiReviewData: aiReviewData || null,
       });
 
-      showToast("Tersimpan! Tulisanmu berhasil dicatat.", "success");
-      setActiveEntryId(res.id);
-      await fetchEntries(deviceId);
+      const updatedObj = {
+        id: activeEntryId || res.id,
+        userId: user.uid,
+        title: title.trim() || "Untitled thoughts",
+        content: content.trim(),
+        language,
+        aiReviewed: Boolean(aiReviewData),
+        aiReviewData: aiReviewData || null,
+        createdAt: activeEntryObj?.createdAt || new Date(),
+      };
+
+      if (!activeEntryId) {
+        setActiveEntryId(res.id);
+      }
+      setActiveEntryObj(updatedObj);
+
+      await fetchUserEntries(user.uid);
+      showToast("Tersimpan dengan rapi di jurnalmu 🌷", "success");
     } catch (err) {
       console.error("Gagal menyimpan tulisan:", err);
-      showToast("Gagal menyimpan tulisan. Silakan coba lagi.", "error");
+      showToast("Gagal menyimpan. Silakan coba lagi.", "error");
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Buka tulisan dari riwayat ke editor
-  const handleSelectEntry = (entry) => {
-    setActiveEntryId(entry.id);
-    setText(entry.text || "");
-    if (entry.promptCategory) {
-      setPromptCategory(entry.promptCategory);
+  // Request review from AI Writing Tutor (Groq)
+  const handleReviewWithAi = async () => {
+    if (!user) {
+      setActiveTab("login");
+      return;
     }
-    setActiveTab("beranda");
-    if (editorRef.current) {
-      editorRef.current.scrollIntoView({ behavior: "smooth" });
+
+    if (!content.trim()) {
+      showToast("Tulis sesuatu terlebih dahulu untuk direview.", "error");
+      return;
     }
-  };
 
-  // Mulai lembar baru
-  const handleNewWriting = () => {
-    setActiveEntryId(null);
-    setText("");
-    const today = new Date().getDay();
-    const todayPrompt = getPromptForDay(today, 0);
-    setPromptCategory(todayPrompt.kind);
-  };
-
-  // Hapus satu entri
-  const handleDeleteSingle = async (entryId) => {
+    setIsAiReviewing(true);
     try {
-      await deleteWritingEntry(entryId);
-      setEntries((prev) => prev.filter((item) => item.id !== entryId));
-      if (activeEntryId === entryId) {
+      const idToken = await getIdToken(true);
+      if (!idToken) {
+        showToast("Sesi login berakhir. Silakan masuk kembali.", "error");
+        setIsAiReviewing(false);
+        return;
+      }
+
+      const res = await fetch("/api/ai/review", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          entryId: activeEntryId,
+          text: content.trim(),
+          title: title.trim(),
+          language,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 429 || data.tokenExhausted) {
+          setIsTopUpOpen(true);
+        } else {
+          showToast(data.error || "Gagal mendapatkan review dari AI.", "error");
+        }
+        setIsAiReviewing(false);
+        return;
+      }
+
+      // Review generated successfully!
+      const reviewPayload = data.review;
+      setAiReviewData(reviewPayload);
+
+      // Auto-save the review to Firestore
+      try {
+        const savedRes = await saveWritingEntry({
+          id: activeEntryId,
+          userId: user.uid,
+          title: title.trim() || "Untitled thoughts",
+          content: content.trim(),
+          language,
+          aiReviewed: true,
+          aiReviewedAt: new Date(),
+          aiReviewData: reviewPayload,
+        });
+
+        if (!activeEntryId) {
+          setActiveEntryId(savedRes.id);
+        }
+        setActiveEntryObj((prev) => ({
+          ...(prev || {}),
+          id: activeEntryId || savedRes.id,
+          title: title.trim() || "Untitled thoughts",
+          content: content.trim(),
+          language,
+          aiReviewed: true,
+          aiReviewData: reviewPayload,
+        }));
+        await fetchUserEntries(user.uid);
+      } catch (saveErr) {
+        console.warn("Could not auto-save review to Firestore:", saveErr);
+      }
+
+      showToast("Tutor review selesai! Buka review untuk melihat saran ✨", "success");
+      setActiveTab("review");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      console.error("AI review error:", err);
+      showToast("Terjadi kendala saat menghubungi AI tutor.", "error");
+    } finally {
+      setIsAiReviewing(false);
+    }
+  };
+
+  // Apply revised text directly to editor
+  const handleApplyRevisedText = (revisedText) => {
+    if (!revisedText) return;
+    setContent(revisedText);
+    setActiveTab("editor");
+    showToast("Versi revisi diterapkan ke lembar tulisanmu ✨", "success");
+  };
+
+  // Delete an entry
+  const handleDeleteEntry = (entry) => {
+    setEntryToDelete(entry);
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!entryToDelete || !user) return;
+    setIsDeleting(true);
+    try {
+      await deleteWritingEntry(entryToDelete.id, user.uid);
+      setEntries((prev) => prev.filter((item) => item.id !== entryToDelete.id));
+
+      if (activeEntryId === entryToDelete.id) {
         handleNewWriting();
       }
-      showToast("Satu catatan telah dihapus.", "success");
-    } catch (err) {
-      console.error("Gagal menghapus catatan:", err);
-      showToast("Gagal menghapus catatan.", "error");
-    }
-  };
 
-  // Hapus semua entri pengguna
-  const handleConfirmDeleteAll = async () => {
-    if (!deviceId) return;
-    setIsDeletingAll(true);
-    try {
-      await deleteAllWritingEntries(deviceId);
-      setEntries([]);
-      handleNewWriting();
       setIsConfirmOpen(false);
-      showToast("Semua riwayat tulisan telah dibersihkan.", "success");
+      setEntryToDelete(null);
+      showToast("Tulisan telah dihapus dari jurnalmu.", "success");
     } catch (err) {
-      console.error("Gagal menghapus semua data:", err);
-      showToast("Gagal menghapus data dari database.", "error");
+      console.error("Gagal menghapus tulisan:", err);
+      showToast("Gagal menghapus tulisan.", "error");
     } finally {
-      setIsDeletingAll(false);
+      setIsDeleting(false);
     }
   };
 
-  // Navigasi tab
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    if (tab === "riwayat" && historyRef.current) {
-      historyRef.current.scrollIntoView({ behavior: "smooth" });
-    } else if (tab === "beranda" && editorRef.current) {
-      editorRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
-  return (
-    <div className="min-h-screen pb-20 md:pb-12 pt-3 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto flex flex-col gap-5">
-      {/* Header Utama (Gambar 1) */}
-      <Header />
-
-
-
-      {/* Layout Dua Kolom: Sidebar Navigasi (Kiri) + Konten Jurnal (Kanan) - Persis Gambar 1 */}
-      <div className="flex flex-col md:flex-row gap-6 items-start">
-        {/* Sidebar Navigasi Kiri */}
-        <Sidebar activeTab={activeTab} onTabChange={handleTabChange} />
-
-        {/* Konten Utama Kanan */}
-        <main className="flex-1 w-full flex flex-col gap-6">
-          {/* Card Prompt Harian */}
-          <PromptCard
-            onSelectVariation={(kind) => setPromptCategory(kind)}
-          />
-
-          {/* Area Editor Menulis */}
-          <div ref={editorRef}>
-            <Editor
-              text={text}
-              setText={setText}
-              promptCategory={promptCategory}
-              onSave={handleSave}
-              isSaving={isSaving}
-              activeEntryId={activeEntryId}
-              onNewWriting={handleNewWriting}
-            />
-          </div>
-
-          {/* Riwayat Tulisan */}
-          <div ref={historyRef}>
-            <HistoryList
-              entries={entries}
-              isLoading={isLoadingHistory}
-              activeEntryId={activeEntryId}
-              onSelectEntry={handleSelectEntry}
-              onDeleteSingle={handleDeleteSingle}
-              onRequestDeleteAll={() => setIsConfirmOpen(true)}
-            />
-          </div>
-        </main>
+  // Initial loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-paper text-ink-muted">
+        <div className="text-center space-y-2">
+          <span className="font-serif italic text-2xl text-ink-deep">inkly</span>
+          <p className="font-script text-base text-rose-deep animate-pulse">
+            preparing your writing sanctuary...
+          </p>
+        </div>
       </div>
+    );
+  }
 
-      {/* Modal Konfirmasi Hapus Semua */}
-      <ConfirmModal
-        isOpen={isConfirmOpen}
-        title="Hapus semua tulisan?"
-        message="Tindakan ini tidak bisa dibatalkan. Semua tulisanmu akan dihapus dari database."
-        onConfirm={handleConfirmDeleteAll}
-        onCancel={() => setIsConfirmOpen(false)}
-        isDeleting={isDeletingAll}
+  // AUTH FIRST FLOW: If user is NOT logged in, show Auth Page without navbar!
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col justify-center items-center px-4 sm:px-6 py-12">
+        <AuthView
+          onAuthSuccess={() => {
+            showToast("Selamat datang di sanctuary Inkly ♡", "success");
+            setActiveTab("journal");
+          }}
+        />
+        <footer className="mt-8 text-center text-xs text-ink-faint space-y-1">
+          <p className="font-serif italic text-sm text-ink-muted">
+            © 2024 inkly — made with delicate care, tea, and too many feelings ✿
+          </p>
+          <p className="text-[11px] font-light">
+            an intimate bilingual journal sanctuary
+          </p>
+        </footer>
+      </div>
+    );
+  }
+
+  // Main Sanctuary for Logged In User
+  return (
+    <div className="min-h-full flex flex-col">
+      {/* Site Navigation */}
+      <Header
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        onOpenAuth={() => setActiveTab("login")}
       />
 
-      {/* Toast Feedback */}
+      {/* Main Content Stage */}
+      <main className="flex-grow max-w-5xl w-full mx-auto px-6 py-8">
+        {/* VIEW 1: JOURNAL HOME */}
+        {activeTab === "journal" && (
+          <JournalList
+            entries={entries}
+            isLoading={isLoadingEntries}
+            activeEntryId={activeEntryId}
+            onSelectEntry={handleSelectEntry}
+            onDeleteEntry={handleDeleteEntry}
+            onNewWriting={handleNewWriting}
+            onOpenAuth={() => setActiveTab("login")}
+            user={user}
+          />
+        )}
+
+        {/* VIEW 2: WRITING EDITOR */}
+        {activeTab === "editor" && (
+          <Editor
+            title={title}
+            setTitle={setTitle}
+            content={content}
+            setContent={setContent}
+            language={language}
+            setLanguage={setLanguage}
+            onSave={handleSave}
+            isSaving={isSaving}
+            activeEntryId={activeEntryId}
+            onNewWriting={handleNewWriting}
+            onReviewWithAi={handleReviewWithAi}
+            isAiReviewing={isAiReviewing}
+            aiReviewData={aiReviewData}
+            dailyAiUsed={false}
+            onApplyRevisedText={handleApplyRevisedText}
+            onBackToSanctuary={() => setActiveTab("journal")}
+            user={user}
+            onOpenAuth={() => setActiveTab("login")}
+          />
+        )}
+
+        {/* VIEW 3: AI TUTOR REVIEW */}
+        {activeTab === "review" && (
+          <TutorReviewView
+            originalText={content}
+            aiReviewData={aiReviewData}
+            onBackToEditor={() => setActiveTab("editor")}
+            onApplySuggestion={handleApplyRevisedText}
+          />
+        )}
+
+        {/* VIEW 4: READING SANCTUARY */}
+        {activeTab === "reading" && (
+          <ReadingView
+            entry={
+              activeEntryObj || {
+                title,
+                content,
+                language,
+                aiReviewed: Boolean(aiReviewData),
+                aiReviewData,
+                createdAt: new Date(),
+              }
+            }
+            onBackToSanctuary={() => setActiveTab("journal")}
+            onEditEntry={() => setActiveTab("editor")}
+            onOpenReview={() => setActiveTab("review")}
+            user={user}
+          />
+        )}
+
+        {/* VIEW 5: SETTINGS */}
+        {activeTab === "settings" && (
+          <SettingsView
+            totalEntries={entries.length}
+            preferredLanguage={language}
+            onChangePreferredLanguage={handleChangePreferredLanguage}
+            onOpenAuth={() => setActiveTab("login")}
+          />
+        )}
+      </main>
+
+      {/* Site Footer */}
+      <footer className="mt-16 border-t border-[#EDE6DC] py-8 text-center text-xs text-ink-faint space-y-2">
+        <p className="font-serif italic text-sm text-ink-muted">
+          © 2024 inkly — made with delicate care, tea, and too many feelings ✿
+        </p>
+        <p className="text-[11px] font-light">
+          an intimate bilingual journal sanctuary · Jakarta &amp; London
+        </p>
+      </footer>
+
+      {/* Top Up / Token Exhausted Pop Out Modal */}
+      <TopUpModal
+        isOpen={isTopUpOpen}
+        onClose={() => setIsTopUpOpen(false)}
+      />
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        title="Hapus catatan ini?"
+        message={`"${
+          entryToDelete?.title || "Untitled"
+        }" akan dihapus permanen dari ruang jurnalmu.`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setIsConfirmOpen(false);
+          setEntryToDelete(null);
+        }}
+        isDeleting={isDeleting}
+      />
+
+      {/* Toast Notification */}
       {toast && (
         <Toast
           message={toast.message}

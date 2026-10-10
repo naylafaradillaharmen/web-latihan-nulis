@@ -1,45 +1,30 @@
-import { Playfair_Display, Poppins, Caveat } from "next/font/google";
 import "./globals.css";
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
-  display: "swap",
-});
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
-  variable: "--font-poppins",
-  display: "swap",
-});
-
-const caveat = Caveat({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-caveat",
-  display: "swap",
-});
+import { AuthProvider } from "../context/AuthContext";
 
 export const metadata = {
-  title: "Web Latihan Nulis — Tulis • Pikir • Tumbuh",
+  title: "Inkly — An Intimate Bilingual Writing Sanctuary",
   description:
-    "Jurnal dan latihan menulis harian digital dengan prompt terpilih, timer terarah, dan pencatatan riwayat terpadu.",
+    "Write freely, keep your thoughts close, and learn to express yourself gently in Indonesian and English every day with your mindful AI writing tutor.",
   icons: {
-    icon: "/icon.png",
-    shortcut: "/favicon.ico",
-    apple: "/icon.png",
+    icon: "/icon.png?v=2",
+    shortcut: "/icon.png?v=2",
+    apple: "/icon.png?v=2",
   },
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html
-      lang="id"
-      className={`${playfair.variable} ${poppins.variable} ${caveat.variable}`}
-    >
-      <body className="font-sans antialiased min-h-screen text-palette-deep bg-[#F7FAF9] selection:bg-palette-sky/40 selection:text-palette-deep">
-        {children}
+    <html lang="en" className="h-full">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=La+Belle+Aurore&family=Sacramento&family=Nanum+Pen+Script&family=Newsreader:ital,opsz,wght@0,6..72,200..700;1,6..72,200..700&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="min-h-full flex flex-col font-sans antialiased text-ink-deep bg-paper selection:bg-rose-soft selection:text-rose-deep">
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

@@ -3,63 +3,80 @@
 @tailwind utilities;
 
 :root {
-  --color-mist: #DBE7E7;
-  --color-sky: #B8D2DF;
-  --color-slate: #AEB8C1;
-  --color-periwinkle: #A8ACC1;
-  --color-muted: #A8A8B0;
-  --color-deep: #4D6072;
+  --color-paper: #FAF7F2;
+  --color-paper-warm: #F5EFE6;
+  --color-paper-card: #FFFDFB;
+  --color-ink-deep: #2C2825;
+  --color-ink-muted: #6B625B;
+  --color-ink-faint: #9C9289;
+  --color-rose-accent: #C98B82;
+  --color-rose-deep: #945B54;
+  --color-rose-soft: #F4EBE7;
+  --color-sage-accent: #7D8B6F;
+  --color-sage-deep: #606C38;
+  --color-sage-soft: #EDF1E8;
+  --color-line-warm: #E8DFC8;
 }
 
 body {
-  background-color: #F8FAFB;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(219, 231, 231, 0.45) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(184, 210, 223, 0.35) 0px, transparent 45%),
-    radial-gradient(at 100% 100%, rgba(168, 172, 193, 0.25) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(219, 231, 231, 0.3) 0px, transparent 45%);
+  background-color: #FAF7F2;
+  color: #2C2825;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-image: radial-gradient(#E8DFC8 0.65px, transparent 0.65px);
+  background-size: 24px 24px;
   background-attachment: fixed;
-  color: #4D6072;
   min-height: 100vh;
 }
 
-/* Custom scrollbar */
+::selection {
+  background-color: #F4EBE7;
+  color: #945B54;
+}
+
+.font-script, [class*="font-script"] {
+  font-family: 'La Belle Aurore', 'Sacramento', cursive !important;
+  letter-spacing: 0.03em;
+}
+
+.vintage-rule {
+  background: linear-gradient(to right, transparent, #E6DDD5, transparent);
+  height: 1px;
+}
+
+.delicate-border {
+  border: 1px solid rgba(220, 210, 198, 0.75);
+}
+
+.paper-shadow {
+  box-shadow: 0 4px 20px -2px rgba(92, 77, 66, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom editorial scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(219, 231, 231, 0.3);
+  background: rgba(245, 239, 230, 0.5);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #B8D2DF;
+  background: #DFD5C6;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #AEB8C1;
-}
-
-/* Shimmer animation untuk skeleton */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(219, 231, 231, 0.35) 25%,
-    rgba(255, 255, 255, 0.7) 50%,
-    rgba(219, 231, 231, 0.35) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.8s infinite;
+  background: #C98B82;
 }
