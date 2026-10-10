@@ -342,7 +342,7 @@ export default function Home() {
         />
         <footer className="mt-8 text-center text-xs text-ink-faint space-y-1">
           <p className="font-serif italic text-sm text-ink-muted">
-            © 2024 inkly — made with delicate care, tea, and too many feelings ✿
+            © 2026 inkly — made with delicate care, tea, and too many feelings ✿
           </p>
           <p className="text-[11px] font-light">
             an intimate bilingual journal sanctuary
@@ -446,7 +446,7 @@ export default function Home() {
       {/* Site Footer */}
       <footer className="mt-16 border-t border-[#EDE6DC] py-8 text-center text-xs text-ink-faint space-y-2">
         <p className="font-serif italic text-sm text-ink-muted">
-          © 2024 inkly — made with delicate care, tea, and too many feelings ✿
+          © 2026 inkly — made with delicate care, tea, and too many feelings ✿
         </p>
         <p className="text-[11px] font-light">
           an intimate bilingual journal sanctuary · Jakarta &amp; London

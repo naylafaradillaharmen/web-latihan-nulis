@@ -39,7 +39,7 @@ export default function JournalList({
   }, [entries, filter]);
 
   const formatDate = (dateObj) => {
-    if (!dateObj) return "May 14, 2024";
+    if (!dateObj) return "May 14, 2026";
     try {
       const d = dateObj instanceof Date ? dateObj : new Date(dateObj);
       return new Intl.DateTimeFormat("en-US", {

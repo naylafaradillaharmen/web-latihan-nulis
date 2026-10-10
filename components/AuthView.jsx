@@ -145,7 +145,6 @@ export default function AuthView({ onAuthSuccess }) {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="anahi"
                 className="w-full text-xs rounded-xl border-[#E5DDD2] bg-[#FAF7F2] p-2.5 text-ink-deep focus:border-rose-deep focus:ring-0 outline-none"
               />
             </div>
@@ -159,7 +158,6 @@ export default function AuthView({ onAuthSuccess }) {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
               required
               className="w-full text-xs rounded-xl border-[#E5DDD2] bg-[#FAF7F2] p-2.5 text-ink-deep focus:border-rose-deep focus:ring-0 outline-none"
             />
@@ -185,7 +183,6 @@ export default function AuthView({ onAuthSuccess }) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
                 required
                 className="w-full text-xs rounded-xl border-[#E5DDD2] bg-[#FAF7F2] p-2.5 text-ink-deep focus:border-rose-deep focus:ring-0 outline-none"
               />
