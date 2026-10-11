@@ -112,12 +112,12 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Start a fresh, clean writing sheet
-  const handleNewWriting = () => {
+  // Start a fresh, clean writing sheet (optionally with starter text or prompt)
+  const handleNewWriting = (starterPrompt = "", starterTitle = "") => {
     setActiveEntryId(null);
     setActiveEntryObj(null);
-    setTitle("");
-    setContent("");
+    setTitle(typeof starterTitle === "string" ? starterTitle : "");
+    setContent(typeof starterPrompt === "string" ? starterPrompt : "");
     setAiReviewData(null);
     setActiveTab("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -462,7 +462,7 @@ export default function Home() {
           © 2026 inkly — made with delicate care, tea, and too many feelings ✿
         </p>
         <p className="text-[11px] font-light">
-          an intimate bilingual journal sanctuary · Jakarta &amp; London
+          an intimate bilingual journal sanctuary
         </p>
       </footer>
 
