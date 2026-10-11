@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { Trash2, RefreshCw, Pencil, Check, X, Volume2, VolumeX, Sparkles } from "lucide-react";
-import { getAmbientSoundEngine } from "../lib/ambientAudio";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Trash2, RefreshCw, Pencil, Check, X, Volume2, VolumeX, Sparkles, Music } from "lucide-react";
 
 export default function JournalList({
   entries = [],
@@ -36,10 +35,41 @@ export default function JournalList({
   const [isEditingCurrently, setIsEditingCurrently] = useState(false);
   const [currentlyForm, setCurrentlyForm] = useState(DEFAULT_CURRENTLY);
 
-  // 3. Real Ambient Audio Synthesizer
+  // 3. Real Cozy Music Tracks (Acoustic Piano & Warm Lo-Fi)
+  const TRACKS = useMemo(
+    () => [
+      {
+        id: "piano",
+        name: "Piano",
+        title: "letters written at midnight",
+        subtitle: "acoustic piano warmth ✿",
+        icon: "🎹",
+        src: "/audio/piano.mp3",
+      },
+      {
+        id: "relaxing",
+        name: "Cozy Lo-Fi",
+        title: "rainy afternoon tea",
+        subtitle: "warm beats & soft melody 🍵",
+        icon: "☕",
+        src: "/audio/relaxing.mp3",
+      },
+      {
+        id: "empty-mind",
+        name: "Dreamscape",
+        title: "quiet thoughts & serenity",
+        subtitle: "ambient peaceful dream ☁️",
+        icon: "✨",
+        src: "/audio/empty-mind.mp3",
+      },
+    ],
+    []
+  );
+
+  const audioRef = useRef(null);
+  const [selectedTrackIndex, setSelectedTrackIndex] = useState(0);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [audioPreset, setAudioPreset] = useState("rain"); // "rain" | "waves" | "breeze"
-  const [audioVolume, setAudioVolume] = useState(0.45);
+  const [audioVolume, setAudioVolume] = useState(0.5);
   const [isMuted, setIsMuted] = useState(false);
 
   // Load saved 'currently' data on mount
@@ -95,50 +125,58 @@ export default function JournalList({
     fetchSpark(false);
   }, []);
 
-  // Audio Engine Management
-  const toggleAudio = (presetOverride) => {
-    const engine = getAmbientSoundEngine();
-    if (!engine) return;
+  // Audio Playback Management (HTML5 Audio with Local MP3)
+  const toggleAudio = (newIndex) => {
+    if (!audioRef.current) return;
 
-    const presetToPlay = presetOverride || audioPreset;
+    if (newIndex !== undefined && newIndex !== selectedTrackIndex) {
+      setSelectedTrackIndex(newIndex);
+      audioRef.current.src = TRACKS[newIndex].src;
+      audioRef.current.volume = isMuted ? 0 : audioVolume;
+      audioRef.current
+        .play()
+        .then(() => setIsPlayingAudio(true))
+        .catch(() => {});
+      return;
+    }
 
-    if (isPlayingAudio && !presetOverride) {
-      engine.stop();
+    if (isPlayingAudio) {
+      audioRef.current.pause();
       setIsPlayingAudio(false);
     } else {
-      engine.setVolume(isMuted ? 0 : audioVolume);
-      engine.play(presetToPlay);
-      setAudioPreset(presetToPlay);
-      setIsPlayingAudio(true);
+      audioRef.current.volume = isMuted ? 0 : audioVolume;
+      audioRef.current
+        .play()
+        .then(() => setIsPlayingAudio(true))
+        .catch(() => {});
     }
   };
 
   const handleVolumeChange = (e) => {
     const val = parseFloat(e.target.value);
     setAudioVolume(val);
-    const engine = getAmbientSoundEngine();
-    if (engine) engine.setVolume(val);
+    if (audioRef.current) {
+      audioRef.current.volume = val;
+    }
     if (val > 0 && isMuted) setIsMuted(false);
   };
 
   const toggleMute = () => {
-    const engine = getAmbientSoundEngine();
-    if (!engine) return;
+    if (!audioRef.current) return;
     if (isMuted) {
       setIsMuted(false);
-      engine.setVolume(audioVolume);
+      audioRef.current.volume = audioVolume;
     } else {
       setIsMuted(true);
-      engine.setVolume(0);
+      audioRef.current.volume = 0;
     }
   };
 
-  // Stop audio when component unmounts
+  // Pause audio when component unmounts
   useEffect(() => {
     return () => {
-      const engine = getAmbientSoundEngine();
-      if (engine && engine.isPlaying) {
-        engine.stop();
+      if (audioRef.current) {
+        audioRef.current.pause();
       }
     };
   }, []);
@@ -624,8 +662,18 @@ export default function JournalList({
             )}
           </div>
 
-          {/* Card 3: Real Ambient Sound Synthesizer */}
+          {/* Card 3: Real Cozy Music Player */}
           <div className="bg-paper-card p-5 rounded-2xl delicate-border space-y-3.5 paper-shadow">
+            {/* Hidden native audio element */}
+            <audio
+              ref={audioRef}
+              src={TRACKS[selectedTrackIndex].src}
+              loop
+              preload="metadata"
+              onPlay={() => setIsPlayingAudio(true)}
+              onPause={() => setIsPlayingAudio(false)}
+            />
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span
@@ -634,54 +682,31 @@ export default function JournalList({
                   }`}
                 />
                 <span className="text-xs uppercase tracking-widest text-ink-faint">
-                  companion audio
+                  companion music
                 </span>
               </div>
               <span className="text-xs text-sage-deep font-serif italic">
-                {audioPreset === "rain" && "gentle raindrops"}
-                {audioPreset === "waves" && "soft ocean tides"}
-                {audioPreset === "breeze" && "whispering wind"}
+                {TRACKS[selectedTrackIndex].subtitle}
               </span>
             </div>
 
-            {/* Ambient Sound Mode Selector Tabs */}
+            {/* Track Selector Tabs */}
             <div className="grid grid-cols-3 gap-1 p-1 bg-[#F5EFE6] rounded-xl text-xs">
-              <button
-                type="button"
-                onClick={() => toggleAudio("rain")}
-                className={`py-1.5 px-2 rounded-lg transition text-[11px] flex items-center justify-center gap-1 font-medium ${
-                  audioPreset === "rain"
-                    ? "bg-white text-ink-deep shadow-xs"
-                    : "text-ink-faint hover:text-ink-deep"
-                }`}
-              >
-                <span>🌧️</span>
-                <span>Rain</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleAudio("waves")}
-                className={`py-1.5 px-2 rounded-lg transition text-[11px] flex items-center justify-center gap-1 font-medium ${
-                  audioPreset === "waves"
-                    ? "bg-white text-ink-deep shadow-xs"
-                    : "text-ink-faint hover:text-ink-deep"
-                }`}
-              >
-                <span>🌊</span>
-                <span>Waves</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleAudio("breeze")}
-                className={`py-1.5 px-2 rounded-lg transition text-[11px] flex items-center justify-center gap-1 font-medium ${
-                  audioPreset === "breeze"
-                    ? "bg-white text-ink-deep shadow-xs"
-                    : "text-ink-faint hover:text-ink-deep"
-                }`}
-              >
-                <span>🍃</span>
-                <span>Breeze</span>
-              </button>
+              {TRACKS.map((track, idx) => (
+                <button
+                  key={track.id}
+                  type="button"
+                  onClick={() => toggleAudio(idx)}
+                  className={`py-1.5 px-2 rounded-lg transition text-[11px] flex items-center justify-center gap-1 font-medium ${
+                    selectedTrackIndex === idx
+                      ? "bg-white text-ink-deep shadow-xs"
+                      : "text-ink-faint hover:text-ink-deep"
+                  }`}
+                >
+                  <span>{track.icon}</span>
+                  <span>{track.name}</span>
+                </button>
+              ))}
             </div>
 
             {/* Audio Player Strip */}
@@ -700,18 +725,16 @@ export default function JournalList({
                     <span className="w-1 bg-white rounded-full animate-bounce [animation-delay:300ms] h-full" />
                   </div>
                 ) : (
-                  "♪"
+                  <span>♪</span>
                 )}
               </div>
 
               <div className="flex-grow min-w-0">
                 <p className="text-xs font-medium text-ink-deep truncate">
-                  {audioPreset === "rain" && "rain on windowpane"}
-                  {audioPreset === "waves" && "calm shoreline waves"}
-                  {audioPreset === "breeze" && "quiet autumn breeze"}
+                  {TRACKS[selectedTrackIndex].title}
                 </p>
                 <p className="text-[11px] text-ink-faint truncate">
-                  {isPlayingAudio ? "playing live soundscape" : "tap play to listen"}
+                  {isPlayingAudio ? "now playing softly" : "tap play to listen"}
                 </p>
               </div>
 
@@ -723,7 +746,7 @@ export default function JournalList({
                     ? "bg-rose-deep text-white hover:bg-rose-accent"
                     : "bg-paper-warm text-ink-deep hover:bg-rose-accent hover:text-white"
                 }`}
-                title={isPlayingAudio ? "Jeda audio" : "Putar suara ambient"}
+                title={isPlayingAudio ? "Jeda musik" : "Putar musik santai"}
               >
                 {isPlayingAudio ? "❚❚" : "▶"}
               </button>
