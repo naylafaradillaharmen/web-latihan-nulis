@@ -182,7 +182,20 @@ export default function Home() {
       showToast("Tersimpan dengan rapi di jurnalmu 🌷", "success");
     } catch (err) {
       console.error("Gagal menyimpan tulisan:", err);
-      showToast("Gagal menyimpan. Silakan coba lagi.", "error");
+      let errMsg = "Gagal menyimpan. Silakan coba lagi.";
+      if (err?.code === "permission-denied") {
+        errMsg =
+          "Izin database ditolak (Firestore Rules). Pastikan aturan firestore.rules sudah di-Publish di Firebase Console.";
+      } else if (
+        err?.code === "not-found" ||
+        (err?.message && err.message.toLowerCase().includes("database"))
+      ) {
+        errMsg =
+          "Database Firestore belum dibuat di Firebase Console. Buka Firebase Console > Firestore Database > Create database.";
+      } else if (err?.message) {
+        errMsg = `Gagal menyimpan: ${err.message}`;
+      }
+      showToast(errMsg, "error");
     } finally {
       setIsSaving(false);
     }

@@ -12,7 +12,7 @@ import {
   browserLocalPersistence,
   browserSessionPersistence,
 } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { auth, isFirebaseConfigured } from "../lib/firebase";
 
 const AuthContext = createContext({
   user: null,
@@ -23,6 +23,17 @@ const AuthContext = createContext({
   resetPassword: async () => {},
   getIdToken: async () => null,
 });
+
+function assertAuthInitialized() {
+  if (!auth) {
+    if (!isFirebaseConfigured) {
+      throw new Error(
+        "Konfigurasi Firebase belum terdeteksi. Jika di Vercel/hosting, pastikan NEXT_PUBLIC_FIREBASE_* sudah diset di Environment Variables. Jika di localhost, silakan restart server (npm run dev)."
+      );
+    }
+    throw new Error("Firebase Auth belum siap. Silakan refresh halaman.");
+  }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -43,7 +54,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password, rememberDevice = true) => {
-    if (!auth) throw new Error("Firebase Auth is not initialized.");
+    assertAuthInitialized();
     try {
       const persistence = rememberDevice
         ? browserLocalPersistence
@@ -56,7 +67,7 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (email, password, displayName = "") => {
-    if (!auth) throw new Error("Firebase Auth is not initialized.");
+    assertAuthInitialized();
     try {
       await setPersistence(auth, browserLocalPersistence);
     } catch (persistErr) {
@@ -80,7 +91,7 @@ export function AuthProvider({ children }) {
   };
 
   const resetPassword = async (email) => {
-    if (!auth) throw new Error("Firebase Auth is not initialized.");
+    assertAuthInitialized();
     return await sendPasswordResetEmail(auth, email);
   };
 

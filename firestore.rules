@@ -7,14 +7,13 @@ service cloud.firestore {
       allow read, update, delete: if request.auth != null 
                                   && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null 
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.content is string;
+                    && request.resource.data.userId == request.auth.uid;
     }
 
     // Daily AI usage tracking: Scoped to user's UID
     match /daily_ai_usage/{usageId} {
-      allow read: if request.auth != null 
-                  && resource.data.userId == request.auth.uid;
+      allow read, delete: if request.auth != null 
+                          && resource.data.userId == request.auth.uid;
       allow create, update: if request.auth != null 
                             && request.resource.data.userId == request.auth.uid;
     }

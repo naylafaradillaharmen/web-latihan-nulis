@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { isFirebaseConfigured } from "../lib/firebase";
 
 export default function AuthView({ onAuthSuccess }) {
   const [tab, setTab] = useState("login"); // "login" | "register" | "forgot"
@@ -87,7 +88,10 @@ export default function AuthView({ onAuthSuccess }) {
         errMsg = "Passphrase terlalu singkat (minimal 6 karakter).";
       } else if (
         err.code === "auth/configuration-not-found" ||
-        (err.message && err.message.includes("configuration-not-found"))
+        err.code === "auth/operation-not-allowed" ||
+        (err.message &&
+          (err.message.includes("configuration-not-found") ||
+            err.message.includes("operation-not-allowed")))
       ) {
         errMsg =
           "Layanan Auth belum diaktifkan di Firebase Console. Buka Firebase Console > Authentication > Sign-in method > aktifkan 'Email/Password'.";
@@ -122,6 +126,14 @@ export default function AuthView({ onAuthSuccess }) {
             {tab === "forgot" && "we'll send instructions to your inbox."}
           </p>
         </div>
+
+        {/* Firebase unconfigured notice */}
+        {!isFirebaseConfigured && (
+          <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 text-xs text-amber-800 text-left font-light leading-relaxed">
+            <span className="font-medium block mb-0.5">Konfigurasi Firebase belum terhubung</span>
+            Pastikan variabel <code>NEXT_PUBLIC_FIREBASE_*</code> sudah ditambahkan di Environment Variables (Vercel/hosting) atau file <code>.env.local</code> (lokal).
+          </div>
+        )}
 
         {/* Feedback message / error */}
         {error && (
